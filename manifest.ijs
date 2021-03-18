@@ -5,7 +5,6 @@ OOP Dictionary supporting any type of keys and values, fast forward and reverse 
 FILES=: 0 : 0
 dict.ijs
 tests.ijs
-README.txt
 )
 FOLDER=: 'types/dict'
 VERSION=: '0.0.0'
