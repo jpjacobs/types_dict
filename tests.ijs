@@ -1,5 +1,5 @@
 NB. tests for types/dict class
-require 'dict.ijs'
+require '~/addons/types/dict/dict.ijs'
 
 NB. tests
 test=: 3 : 0
