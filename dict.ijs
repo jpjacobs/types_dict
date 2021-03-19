@@ -1,20 +1,34 @@
 NB. Dict class for J
-NB. D=: 'dict'conew~ keys;vals creates new dictionary object
-NB. dict_z_ keys;vals (shortcut for the above)
-NB.   keys and values can be any boxable type, but should be rectangular
-NB.   as keys and values are stored each in a single array.
-NB.   Otherwise, use sybmbolss (fast) or boxes (slower).
-NB. Methods:
-NB.   get/set support lists of keys/values (in case of set of equal length)
-NB. get__D y     gets the value corresponding to key y from D
-NB. get__D inv y gets the first key corresponding to value y from D
-NB. set__D y     deletes key y and corresponding value from D
-NB. x set__D y   sets key x to value y (creates/updates as needed)
-NB. map__D ''    pretty print dictionary
-NB. sort__D y    sorts D by key (k/K) or value (v/V), lower being ascending
 
 coret=. coname'' NB. restore after definition
-coclass 'dict'
+coclass 'pdict'
+NB. Help text
+help =: 0 : 0
+Create new dict:
+
+D=: 'dict'conew~ keys;vals creates new dictionary object
+D=: dict keys;vals (shortcut in the z-locale for the above)
+
+  keys and values can be any boxable type, but should be rectangular
+  as keys and values are stored each in a single array.
+  Otherwise, use sybmbolss (fast) or boxes (slower).
+
+Dictionary Methods:
+  get__D y     gets the value corresponding to key y from D
+  get__D inv y gets the first key corresponding to value y from D
+  set__D y     deletes key y and corresponding value from D
+x set__D y     sets key x to value y (creates/updates as needed)
+  map__D ''    pretty print dictionary
+  sort__D y    sorts D by key (k/K) or value (v/V), lower being ascending
+
+get/set support lists of keys/values (in case of set of equal length)
+
+Of course, you can always use the keys and values fields directly, e.g.
+
+vals__D #/. keys__D
+
+)
+
 NB. invertible lookup (first match)
 lu=: 2 : '(m{~n&i. ) :. (n{~m&i.)'
 NB. TODO don't work, define before use
@@ -36,7 +50,7 @@ NB. set verb
 NB.   monad removes key y; 
 NB.   dyad updates keys;vals to
 NB.    include new key x with val y
-NB.   (both recreate get verb)
+NB.   (both recreate the get verb)
 set=: 3 : 0
 id=. <<<keys i. y NB. triple boxed indices to { remove them
 'keys vals'=: keys ;&(id&{) vals
@@ -68,6 +82,7 @@ s=. keys /:@[`(/:@])`(\:@[)`(\:@])@.a vals
 get=: vals lu keys
 0 0$0
 )
+destroy=:codestroy
 NB. restore orig. locale
 cocurrent coret
 NB. defines convenience shortcut in z locale
