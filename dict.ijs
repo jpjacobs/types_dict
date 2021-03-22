@@ -1,17 +1,18 @@
 NB. Dict class for J
-
-coret=. coname'' NB. restore after definition
 coclass 'pdict'
 NB. Help text
 help =: 0 : 0
+Dictionary class for J
+load 'types/dict/dict.ijs'
+
 Create new dict:
 
-D=: 'dict'conew~ keys;vals creates new dictionary object
+D=: 'pdict'conew~ keys;vals creates new dictionary object
 D=: dict keys;vals (shortcut in the z-locale for the above)
 
-  keys and values can be any boxable type, but should be rectangular
+  Keys and values can be any boxable type, but should be rectangular
   as keys and values are stored each in a single array.
-  Otherwise, use sybmbolss (fast) or boxes (slower).
+  Otherwise, use sybmbols (fast) or boxes (slower).
 
 Dictionary Methods:
   get__D y     gets the value corresponding to key y from D
@@ -26,6 +27,8 @@ get/set support lists of keys/values (in case of set of equal length)
 Of course, you can always use the keys and values fields directly, e.g.
 
 vals__D #/. keys__D
+If keys or values in D are altered manually, redefine get to update accordingly:
+  get__D=: vals__D lu__D keys__D
 
 )
 
@@ -83,7 +86,6 @@ get=: vals lu keys
 0 0$0
 )
 destroy=:codestroy
-NB. restore orig. locale
-cocurrent coret
+
 NB. defines convenience shortcut in z locale
-dict_z_ =: conew&'dict'
+dict_z_ =: conew&'pdict'
