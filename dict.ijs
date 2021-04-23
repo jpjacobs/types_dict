@@ -14,12 +14,13 @@ D=: dict keys;vals (shortcut in the z-locale for the above)
   Otherwise, use sybmbolss (fast) or boxes (slower).
 
 Dictionary Methods:
-  get__D y     gets the value corresponding to key y from D
-  get__D inv y gets the first key corresponding to value y from D
-  set__D y     deletes key y and corresponding value from D
-x set__D y     sets key x to value y (creates/updates as needed)
-  map__D ''    pretty print dictionary
-  sort__D y    sorts D by key (k/K) or value (v/V), lower being ascending
+  gf__D y        gets the value corresponding to key y from D
+  gb__D y        gets the first key corresponding to value y from D
+  set__D y       deletes key y and corresponding value from D
+x set__D y       sets key x to value y (creates/updates as needed)
+  map__D ''      pretty print dictionary
+  sort__D y      sorts D by key (k/K) or value (v/V), lower being ascending
+  updaterev__D'' update reverse lookup table
 
 get/set support lists of keys/values (in case of set of equal length)
 
@@ -30,7 +31,8 @@ vals__D #/. keys__D
 )
 
 NB. invertible lookup (first match)
-lu=: 2 : '(m{~n&i. ) :. (n{~m&i.)'
+luf=: 2 : 'm{~n&i.'
+lub=: 2 : 'n{~m&i.'
 NB. TODO don't work, define before use
 NB. define helpers for symbol keys
 NB. gets=: get@s:
@@ -43,7 +45,8 @@ create=: 3 : 0
 'keys and values must have same lenght' assert =/ #&>y
 'keys vals'=:y
 echo^:(+./-.~:keys) 'warning: non unique keys are not retrievable'
-get=: vals lu keys
+gf=: vals luf keys
+gb=: vals lub keys
 0 0$0
 )
 NB. set verb 
@@ -54,7 +57,7 @@ NB.   (both recreate the get verb)
 set=: 3 : 0
 id=. <<<keys i. y NB. triple boxed indices to { remove them
 'keys vals'=: keys ;&(id&{) vals
-get=: vals lu keys NB. update lookup
+gf=: vals luf keys
 0 0$0
 :
 NB. s indicates new keys to be added
@@ -62,7 +65,9 @@ s=.(#keys)=id=.keys i. x
 keys=: keys,(s#x) NB. add new keys
 vals=: (y#~-.s)(id#~-.s)}vals,(s#y)
 NB. rebuild if needed, i.e. newly created keys present
-if. +./s do. get=:vals lu keys end.
+if. +./s do.
+  gf=: vals luf keys
+end.
 0 0$0
 )
 
@@ -79,9 +84,15 @@ a=.'kvKV'i.y
 ('unsupported sort: ',":y) assert a<4
 s=. keys /:@[`(/:@])`(\:@[)`(\:@])@.a vals
 'keys vals'=: keys ;&(s&{) vals
-get=: vals lu keys
+gf=: vals luf keys
 0 0$0
 )
+
+NB. update reverse lookup table
+updaterev =: 3 : 0
+gb =: vals lub keys
+)
+
 destroy=:codestroy
 NB. restore orig. locale
 cocurrent coret
