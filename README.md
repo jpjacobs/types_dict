@@ -13,7 +13,7 @@ This addon tries to fill this gap by offering an [OOP](https://code.jsoftware.co
 
 **Limitations**:
 - No nested dictionaries. As the dictionary is a J object, it cannot be simply placed inside another dictionary, as it is just a boxed number.
-- Updating reverse precomputed lookup to be explicitly done after changing values (it is done automatically only after creation). This to avoid having to precompute a search that might never be used at every update of a value, which probably is the most common operation on a dictionary.
+- Updating reverse precomputed lookup is done automatically when calling getk as needed. The first call can therefore be slower. When values change, it is scheduled for update at the next execution of getk.
 
 ## Installation
 You can install this addon straigth from github with:
@@ -33,11 +33,13 @@ D=: dict keys;vals            NB. (shortcut in the z-locale for the above)
 
 Dictionary Methods:
 ```j
-  gf__D y        NB. gets the value corresponding to key y from D
-  gb__D y        NB. gets the first key corresponding to value y from D
-  set__D y       NB. deletes key y and corresponding value from D
-x set__D y       NB. sets key x to value y (creates/updates as needed)
-  map__D ''      NB. pretty print dictionary
-  sort__D y      NB. sorts D by key (k/K) or value (v/V), lower being ascending
-  updaterev__D'' NB. update reverse precomputed lookup
+  getv__D y      gets the value corresponding to key y from D
+  getk__D y      gets the first key corresponding to value y from D
+  set__D y       deletes key y and corresponding value from D
+x set__D y       sets key x to value y (creates/updates as needed)
+  map__D ''      pretty print dictionary
+  sort__D y      sorts D by key (k/K) or value (v/V), lower being ascending
+x joink__D y     join D with dictionaries in y by merging keys (last survives), in-place if x=1
+x joinv__D y     NYI join D with dictionaries in y, in-place if x=1
+x u filter__D y  NYI think through whats useful. feels like could be more general
 ```
