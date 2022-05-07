@@ -50,7 +50,7 @@ NB. create makes initial dict; expects boxed keys;vals
 create=: 3 : 0
 'y must be boxed' assert 32=3!:0 y
 'y must have 2 items' assert 2=#y
-'keys and values must have same lenght' assert =/ #&>y
+'keys and values must have same length' assert =/ #&>y
 'keys vals'=:y
 echo^:(+./-.~:keys) 'warning: non unique keys are not retrievable'
 getv=: keys luv
@@ -83,7 +83,7 @@ NB. rebuild if needed, i.e. newly created keys present
 if. +./s do.
   getv=:keys luv 
 end.
-0 0$getk_ready=:0 NB. reset reverse lookup ready flag, assuming vals ohanged
+0 0$getk_ready=:0 NB. reset reverse lookup ready flag, assuming vals changed
 )
 
 NB. map returns dict in easy display form, indicating dataypes as well
