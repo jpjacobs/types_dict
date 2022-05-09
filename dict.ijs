@@ -1,6 +1,6 @@
 NB. Dict class for J
 coclass 'pdict'
-NB. Help text
+NB. Help text TODO: verify docs with current behaviour
 help =: 0 : 0
 Dictionary class for J
 load 'types/dict/dict.ijs'
@@ -35,26 +35,24 @@ If keys or values in D are altered manually, redefine get to update accordingly:
   getv__D=: vals__D luv__D keys__D
 
 )
+NB. error helperverb (inspired by assert)
+NB. takes x: errnum;msg
+assertno =: 0 0$([ 13!:8~ ],~(LF,'|  '),~ (9!:8'') {::~ <:@[)&>/@[^:(0 e. ])
 
 NB. invertible lookup (first match)
 luv=: 1 : 'vals{~m&i.'
 luk=: 1 : 'keys{~m&i.'
-NB. TODO don't work, define before use
-NB. helpers for symbol keys
-NB. getvs=: getv@s:
-NB. sets=: (set~s:)~
 NB. linear display for map
 lin =: 3 : '5!:5<''y'''
 
 NB. create makes initial dict; expects boxed keys;vals
 create=: 3 : 0
-'y must be boxed' assert 32=3!:0 y
-'y must have 2 items' assert 2=#y
-'keys and values must have same length' assert =/ #&>y
+(3;'y must be boxed') assertno 32=3!:0 y
+(3;'y must have 2 items') assertno 2=#y
+(9;'keys and values must have same length') assertno =/ #&>y
 'keys vals'=:y
 echo^:(+./-.~:keys) 'warning: non unique keys are not retrievable'
-getv=: keys luv
-0 0$getk_ready=:0
+0 0$getk_ready=:getv_ready=:0 NB. reset lookup ready flags
 )
 NB. set verb 
 NB.   monad removes key y; 
@@ -63,26 +61,27 @@ NB.    include new key x with val y
 NB.   (both recreate the get verb)
 set=: 3 : 0
 id=. <<<keys i. y NB. triple boxed indices to { remove them
-'keys vals'=: keys ;&(id&{) vals
-getv=: keys luv 
-0 0$getk_ready=:0 NB. reset reverse lookup ready flag, assuming vals changed
+'keys vals'=: keys ;&(id&{) vals NB. fails with index error if key not present.
+0 0$getk_ready=:getv_ready=:0 NB. reset lookup ready flags, assuming keys and vals changed
 :
 NB. check and fix y to conform to keys and vals
 NB. i.e. rank of x and y should be _1 cell rank of keys and vals
-assert. keys (}.@[ -: }.@]^:(=&#))&$ x NB. same trailing axes required
-kfix=. (($,)~ 1,$)^:(keys -&#&$ x) x
-assert. vals (}.@[ -: }.@]^:(=&#))&$ y NB. same trailing axes required
-vfix=. (($,)~ 1,$)^:(vals -&#&$ y ) y
-NB. now kfix and vfix should have same number of items
-assert. kfix =&# vfix
+try. NB. check for shape agreements, error in catch.
+  assert. keys (}.@[ -: }.@]^:(=&#))&$ x NB. same trailing axes required
+  kfix=. (($,)~ 1,$)^:(keys -&#&$ x) x
+  assert. vals (}.@[ -: }.@]^:(=&#))&$ y NB. same trailing axes required
+  vfix=. (($,)~ 1,$)^:(vals -&#&$ y ) y
+  NB. now kfix and vfix should have same number of items
+  assert. kfix =&# vfix
+catch.
+  (9;'}.@$ of keys and values to be set should match those of the dictionary keys and values') assertno 0
+end.
 NB. s is mask indicating missing keys to be added
 s=.(#keys)=id=.keys i. kfix
 keys=: keys,(s#kfix) NB. add new keys
 vals=: (vfix#~-.s)(id#~-.s)}vals,(s#vfix)
-NB. rebuild if needed, i.e. newly created keys present
-if. +./s do.
-  getv=:keys luv 
-end.
+NB. trigger getv rebuild if needed, i.e. newly created keys present
+getv_ready=: -. +./s
 0 0$getk_ready=:0 NB. reset reverse lookup ready flag, assuming vals changed
 )
 
@@ -96,12 +95,10 @@ NB.   k/v:keys/vals ascending
 NB.   K/V:keys/vals descending
 sort =: 3 : 0
 a=.'kvKV'i.y
-('unsupported sort: ',":y) assert a<4
+(3;'unsupported sort: ',":y) assertno a<4
 s=. keys /:@[`(/:@])`(\:@[)`(\:@])@.a vals
 'keys vals'=: keys ;&(s&{) vals
-getv=: keys luv 
-0 0$getk_ready=:0 NB. reset reverse lookup ready flag
-0 0$0
+0 0$getk_ready=:getv_ready=:0 NB. reset lookup ready flags
 )
 NB. update reverse lookup getkint only when getk is called if it's not ready.
 NB.  create and set clear this flag, assuming values being changed.
@@ -111,6 +108,14 @@ if. -. getk_ready do.
   getk_ready=:1
 end.
 getkint y
+)
+NB. the same for getv
+getv =: 3 : 0
+if. -. getv_ready do.
+  getvint=: keys luv NB. update internal version of getv
+  getv_ready=:1
+end.
+getvint y
 )
 
 NB. joink: join dicts y (as boxed locale numbers) into this dictionary, on keys,ex inplace (1) or not. it returns the dict written to.
@@ -131,7 +136,7 @@ for_od. y do. NB. for other dicts:
     NB. assert. vals__dest =&(3!:0) vals__od NB. require same datatype
     keys__od set__dest vals__od
   catch.
-    ('shapes do not match; joined up to dict ',(":od_index),' in y') assert 0
+    (9;'shapes do not match; joined up to dict ',(":od_index),' in y') assertno 0
     if. -. x do. NB. not in place. 
       destroy__dest ''
       dest=. a:
