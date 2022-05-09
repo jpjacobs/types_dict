@@ -1,6 +1,7 @@
 NB. tests for types/dict class
 NB. require '~/addons/types/dict/dict.ijs'
-NB. NB. - limitation of unittest: no way of requiring an error.
+NB. - limitation of unittest: no way of requiring an error.
+NB.   workaround: use assert 0 under line that should have triggered error.
 
 NB. tests single dict
 before_all=: load@'dict.ijs'"_
@@ -11,11 +12,16 @@ before_each=: 3 : 0
   a2=: dict (s: ' abc def a b');100 *i. 4 3 
   NB. complicated shape keys and values
   b =: dict (i. 5 2 3);(-i. 5 4)
+  rank0a=: dict 'a';1 NB. create dict with rank 0 keys/vals
+  rank0b=: dict 'a';1 NB. create dict with rank 0 keys/vals
 )
 after_each=: 3 : 0 NB. cleanup
   destroy__d''
   destroy__a1''
   destroy__a2''
+  destroy__b''
+  destroy__rank0a''
+  destroy__rank0b''
 )
 test_creation_getk_getv=: 3 : 0
   assert 1-:getv__d 'a'
@@ -24,6 +30,8 @@ test_creation_getk_getv=: 3 : 0
   assert 'a' -:getk__d 1
   assert 1=getk_ready__d NB. afterwards, it should.
   assert 'cab'-:getk__d 3 1 2
+  'b' set__rank0a 2   NB. should allow extension by one
+  'abc' set__rank0b 1 2 3 NB. should also allow multi-insert
 )
 test_set=: 3 : 0
   assert 'a'-: getk__d 1 NB. just to get getk_ready = 1
@@ -75,11 +83,14 @@ test_shapeOK =: 3 : 0
 )
 shapeNOK1_expect =: 'length error'
 test_shapeNOK1 =: 3 : 0
-1 2+2 3 5
+  error=: 0 0$13!:8&>~/@[^:(0 e. ])
+  (9;'length error: foo bar') error 0
+  NB. keys <-> values mismatch
+  (s:' foo bar') set__a1 i. 3 3 NB. expected $ 2 3
+  map__a1''
   assert 0 NB. trigger error if we made it through
 )
 
-NB. test higher order keys and values
 
 NB. tests for inter-dict ops
 NB. joink/joinv/intersect/...
