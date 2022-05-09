@@ -50,7 +50,8 @@ create=: 3 : 0
 (3;'y must be boxed') assertno 32=3!:0 y
 (3;'y must have 2 items') assertno 2=#y
 (9;'keys and values must have same length') assertno =/ #&>y
-'keys vals'=:y
+NB. ensure at least rank 1; keys/values should be lists
+'keys vals'=: ,^:(0=#@$)&.> y 
 echo^:(+./-.~:keys) 'warning: non unique keys are not retrievable'
 0 0$getk_ready=:getv_ready=:0 NB. reset lookup ready flags
 )
