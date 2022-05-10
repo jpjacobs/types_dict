@@ -26,9 +26,9 @@ after_each=: 3 : 0 NB. cleanup
 test_creation_getk_getv=: 3 : 0
   assert 1-:getv__d 'a'
   assert 3 1 2 -: getv__d 'cab'
-  assert 0=getk_ready__d NB. shouldn't be ready before getk call
+  assert 0=0{get_ready__d NB. shouldn't be ready before getk call
   assert 'a' -:getk__d 1
-  assert 1=getk_ready__d NB. afterwards, it should.
+  assert 1=0{get_ready__d NB. afterwards, it should.
   assert 'cab'-:getk__d 3 1 2
   'b' set__rank0a 2   NB. should allow extension by one
   'abc' set__rank0b 1 2 3 NB. should also allow multi-insert
@@ -36,13 +36,13 @@ test_creation_getk_getv=: 3 : 0
 test_set=: 3 : 0
   assert 'a'-: getk__d 1 NB. just to get getk_ready = 1
   'd' set__d 100         NB. add d
-  assert getk_ready__d=0 NB. should be reset
+  assert 0=0{get_ready__d NB. should be reset
   assert 100-:getv__d 'd'NB. check d
   assert keys__d -: 'abcd' NB. check keys
   'd' set__d 1000        NB. set d to 1000
   assert keys__d -: 'abcd' NB. should not add extra d
   set__d 'a'             NB. delete a
-  assert getk_ready__d=0 NB. should be reset by set
+  assert 0=get_ready__d NB. should be reset by set
   assert keys__d -: 'bcd'NB. a should have been removed
   assert vals__d -: 2 3 1000 NB. together with its value
   'bc' set__d _20 _30    NB. redefine multiple

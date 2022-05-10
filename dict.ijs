@@ -21,6 +21,8 @@ Dictionary Methods:
 x set__D y       sets key x to value y (creates/updates as needed)
   map__D ''      pretty print dictionary
   sort__D y      sorts D by key (k/K) or value (v/V), lower being ascending
+
+Multi-dictionary Methods:
 x joink__D y     join D with dictionaries in y by merging keys (last survives), in-place if x=1
 x joinv__D y     NYI join D with dictionaries in y, in-place if x=1
 x u filter__D y  NYI think through whats useful. feels like could be more general
@@ -31,8 +33,8 @@ Of course, you can always use the keys and values fields directly, e.g.
 
 vals__D #/. keys__D
 
-If keys or values in D are altered manually, redefine get to update accordingly:
-  getv__D=: vals__D luv__D keys__D
+If keys or values in D are altered manually, trigger getk/getv rebuild with:
+get_ready=:0 0
 
 )
 NB. error helperverb (inspired by assert)
@@ -53,7 +55,7 @@ create=: 3 : 0
 NB. ensure at least rank 1; keys/values should be lists
 'keys vals'=: ,^:(0=#@$)&.> y 
 echo^:(+./-.~:keys) 'warning: non unique keys are not retrievable'
-0 0$getk_ready=:getv_ready=:0 NB. reset lookup ready flags
+0 0$get_ready=:0 0 NB. reset lookup ready flags
 )
 NB. set verb 
 NB.   monad removes key y; 
@@ -63,7 +65,7 @@ NB.   (both recreate the get verb)
 set=: 3 : 0
 id=. <<<keys i. y NB. triple boxed indices to { remove them
 'keys vals'=: keys ;&(id&{) vals NB. fails with index error if key not present.
-0 0$getk_ready=:getv_ready=:0 NB. reset lookup ready flags, assuming keys and vals changed
+0 0$get_ready=:0 0 NB. reset lookup ready flags, assuming keys and vals changed
 :
 NB. check and fix y to conform to keys and vals
 NB. i.e. rank of x and y should be _1 cell rank of keys and vals
@@ -81,9 +83,8 @@ NB. s is mask indicating missing keys to be added
 s=.(#keys)=id=.keys i. kfix
 keys=: keys,(s#kfix) NB. add new keys
 vals=: (vfix#~-.s)(id#~-.s)}vals,(s#vfix)
-NB. trigger getv rebuild if needed, i.e. newly created keys present
-getv_ready=: -. +./s
-0 0$getk_ready=:0 NB. reset reverse lookup ready flag, assuming vals changed
+NB. invalidate getk, trigger getv rebuild if needed, i.e. newly created keys present
+0 0$get_ready=:0 ,-.+./s
 )
 
 NB. map returns dict in easy display form, indicating dataypes as well
@@ -99,22 +100,22 @@ a=.'kvKV'i.y
 (3;'unsupported sort: ',":y) assertno a<4
 s=. keys /:@[`(/:@])`(\:@[)`(\:@])@.a vals
 'keys vals'=: keys ;&(s&{) vals
-0 0$getk_ready=:getv_ready=:0 NB. reset lookup ready flags
+0 0$get_ready=:0 0 NB. reset lookup ready flags
 )
 NB. update reverse lookup getkint only when getk is called if it's not ready.
 NB.  create and set clear this flag, assuming values being changed.
 getk =: 3 : 0
-if. -. getk_ready do.
+if. -.0{get_ready do.
   getkint=: vals luk NB. update internal version of getk
-  getk_ready=:1
+  get_ready=:1 0+.get_ready
 end.
 getkint y
 )
 NB. the same for getv
 getv =: 3 : 0
-if. -. getv_ready do.
+if. -. 1{get_ready do.
   getvint=: keys luv NB. update internal version of getv
-  getv_ready=:1
+  get_ready=:0 1+.get_ready
 end.
 getvint y
 )
