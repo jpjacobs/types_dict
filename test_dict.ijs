@@ -24,6 +24,7 @@ after_each=: 3 : 0 NB. cleanup
   destroy__rank0b''
 )
 test_creation_getk_getv=: 3 : 0
+  assert 0 0-: get_ready__d
   assert 1-:getv__d 'a'
   assert 3 1 2 -: getv__d 'cab'
   assert 0=0{get_ready__d NB. shouldn't be ready before getk call
@@ -32,6 +33,30 @@ test_creation_getk_getv=: 3 : 0
   assert 'cab'-:getk__d 3 1 2
   'b' set__rank0a 2   NB. should allow extension by one
   'abc' set__rank0b 1 2 3 NB. should also allow multi-insert
+
+  empty =. dict (i. 0 2 3) ,&< 0$a: NB. empty dict
+  (i. 4 2 3) set__empty ;:'foo bar ;: 10' NB. should work as well
+  destroy__empty''
+  
+  tt =. dict 'abcad';1 2 3 4 5
+  assert keys__tt='abc'
+  assert vals__tt='1 2 3 5'
+  destroy__tt''
+)
+createErr1_expect=: 'length error'
+test_createErr1 =: 3 : 0
+  f=. dict 'abc';1 2 NB. different length
+  assert 0
+)
+createErr2_expect=: 'domain error'
+test_createErr2 =: 3 : 0
+  f=. dict 1 2 NB. y not boxed
+  assert 0
+)
+createErr3_expect=: 'domain error'
+test_createErr3 =: 3 : 0
+  f=. dict 'abc';'def';1 2 3 NB. y not boxed
+  assert 0
 )
 test_set=: 3 : 0
   assert 'a'-: getk__d 1 NB. just to get getk_ready = 1
@@ -56,22 +81,22 @@ test_set=: 3 : 0
   assert vals__d -: _20 11 1000 _40 _50 99
 )
 NB. test datatype agreement
-dataTypeKeys_expect=:'domain error'
-test_dataTypeKeys =: 3 : 0
+setDataTypeKeys_expect=:'domain error'
+test_setDataTypeKeys =: 3 : 0
 NB. test datatype agreement check for keys
 NB. for now, no explicit check present, nor needed
   1 set__d 111
   assert 0 NB. trigger error if we made it through
 )
-dataTypeVals_expect=:'domain error'
-test_dataTypeVals =: 3 : 0
+setDataTypeVals_expect=:'domain error'
+test_setDataTypeVals =: 3 : 0
 NB. test datatype agreement check for values
   'a' set__d 'X'
   assert 0 NB. trigger error if we made it through
 )
 
 NB. test shape agreement
-test_shapeOK =: 3 : 0
+test_setShapeOK =: 3 : 0
   NB. elements can be list of items 
   (s:<'hello') set__a1 22 33 44 NB. rank 0, 1 into rank 0, 1
   assert 1=#@$keys__a1
@@ -81,10 +106,8 @@ test_shapeOK =: 3 : 0
   assert 2=#@$vals__a1
   (s: ' foo bar') set__a2 i. 2 3
 )
-shapeNOK1_expect =: 'length error'
-test_shapeNOK1 =: 3 : 0
-  error=: 0 0$13!:8&>~/@[^:(0 e. ])
-  (9;'length error: foo bar') error 0
+setShapeNOK1_expect =: 'length error'
+test_setShapeNOK1 =: 3 : 0
   NB. keys <-> values mismatch
   (s:' foo bar') set__a1 i. 3 3 NB. expected $ 2 3
   map__a1''
@@ -96,6 +119,7 @@ NB. tests for inter-dict ops
 NB. joink/joinv/intersect/...
 NB. key/val agreement
 NB. results
+NB. TODO: add check for correct handling of boxes (avoid ;!)
 Note 'test2 =: 3 : 0'
 a=. dict 
 b=. dict

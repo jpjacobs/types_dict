@@ -15,35 +15,72 @@ D=: dict keys;vals (shortcut in the z-locale for the above)
   Otherwise, use sybmbols (fast) or boxes (slower).
 
 Dictionary Methods:
-  getv__D y      gets the value corresponding to key y from D
-  getk__D y      gets the first key corresponding to value y from D
+--------------------
+x getv__D y      gets the value corresponding to key y from D
+x getk__D y      gets the first key corresponding to value y from D
+                 getk and getv take as optional x a padding value for use when a
+                 key is not found (see below).
   set__D y       deletes key y and corresponding value from D
 x set__D y       sets key x to value y (creates/updates as needed)
-  map__D ''      pretty print dictionary
-  sort__D y      sorts D by key (k/K) or value (v/V), lower being ascending
-
-Multi-dictionary Methods:
-x joink__D y     join D with dictionaries in y by merging keys (last survives), in-place if x=1
-x joinv__D y     NYI join D with dictionaries in y, in-place if x=1
-x u filter__D y  NYI think through whats useful. feels like could be more general
 
 get/set support lists of keys/values (in case of set of equal length)
-
+Updates should respect the item size in the dictionary. Creation of empty
+dictionaries is supported, but they should be created with the right item size
+and type, e.g. e=: dict (0$'a'); i. 0 2 3 .
 Of course, you can always use the keys and values fields directly, e.g.
+vals__D #/. keys__D If keys or values in D are altered manually, trigger
+getk/getv rebuild with: get_ready=:0 0
 
-vals__D #/. keys__D
+  map__D ''      pretty print dictionary
+  sort__D y      sorts D by key ('kK') or value ('vV'), lower case being
+                 ascending.
+  flip__D ''     exchange keys <-> values; returns new dict
+  clone__D ''    clone a dictionary to a new object; returns new dict
 
-If keys or values in D are altered manually, trigger getk/getv rebuild with:
-get_ready=:0 0
+Padding element:
+--------------------
+If x is '' (default when no x), an index error is thrown when a key or value in
+y is not in the dictionary.  When x is compatible datatype (i.e. vals,#{.x does
+not error, or the same for keys) its first element is used as padding element.
+Otherwise, the default padding element (e.g. 0 for numbers) is used. 
+
+Multi-dictionary Methods:
+--------------------
+x merge__D y     join D with dictionaries in y by merging keys (last survives),
+                 in-place if x=1
+                 Notes:
+                  - if a value is present in the current (or new) it's
+                    *overwritten* by the ones in the others (in order) (could
+                    be optimised).
+                  - if joining multiple dicts in place, if one dict joined is
+                    not compatible, fails, and leaves the original dict
+                    incomplete.
+  u appl__D ''   apply u to each of the values in D (i.e. u"_1 vals) (x ignored
+                 if present)
+x u appl__D y    insert u between corresponding values in all dicts in D,y
+                 appl__D always returns a new dictionary. x defines how
+                 non-matching keys are handled:
+                 - '' (default) : intersect the sets of  keys between all
+                   dictionaries
+                 - any other: make a union between sets of keys, with x used as
+                   padding element, as for getk/getv.
+
+  u filtk__D y   filter D's keys, keeping entries where u key is 1. (like #). If y is '' or 0, returns a new dict, otherwise, operate in place.
+  u filtv__D y   the same, filtering entries by value.
+
+NYI:
+  deepget        NYI: needed? would index into nested dictionaries, restricting 
+  deepset        values to be boxed. Perhaps better as subclass.
+
 
 )
 NB. error helperverb (inspired by assert)
 NB. takes x: errnum;msg
 assertno =: 0 0$([ 13!:8~ ],~(LF,'|  '),~ (9!:8'') {::~ <:@[)&>/@[^:(0 e. ])
 
-NB. invertible lookup (first match)
-luv=: 1 : 'vals{~m&i.'
-luk=: 1 : 'keys{~m&i.'
+NB. TODO: NYI rethrow: use in catch to rethrow last error after cleanup.
+NB. needed for wrapping adverbs below.
+
 NB. linear display for map
 lin =: 3 : '5!:5<''y'''
 
@@ -54,7 +91,11 @@ create=: 3 : 0
 (9;'keys and values must have same length') assertno =/ #&>y
 NB. ensure at least rank 1; keys/values should be lists
 'keys vals'=: ,^:(0=#@$)&.> y 
-echo^:(+./-.~:keys) 'warning: non unique keys are not retrievable'
+NB. wouldn't it be better to prune these to start with?
+echo^:(+./-.~:keys) 'warning: non unique keys: only first occurrences kept.'
+uk=. ~:keys
+keys=.uk#keys
+vals=.uk#vals
 0 0$get_ready=:0 0 NB. reset lookup ready flags
 )
 NB. set verb 
@@ -64,7 +105,7 @@ NB.    include new key x with val y
 NB.   (both recreate the get verb)
 set=: 3 : 0
 id=. <<<keys i. y NB. triple boxed indices to { remove them
-'keys vals'=: keys ;&(id&{) vals NB. fails with index error if key not present.
+'keys vals'=: keys ,&<&(id&{) vals NB. fails with index error if key not present.
 0 0$get_ready=:0 0 NB. reset lookup ready flags, assuming keys and vals changed
 :
 NB. check and fix y to conform to keys and vals
@@ -99,35 +140,48 @@ sort =: 3 : 0
 a=.'kvKV'i.y
 (3;'unsupported sort: ',":y) assertno a<4
 s=. keys /:@[`(/:@])`(\:@[)`(\:@])@.a vals
-'keys vals'=: keys ;&(s&{) vals
+'keys vals'=: keys (,&<)&(s&{) vals
 0 0$get_ready=:0 0 NB. reset lookup ready flags
 )
 NB. update reverse lookup getkint only when getk is called if it's not ready.
 NB.  create and set clear this flag, assuming values being changed.
-getk =: 3 : 0
+NB. if x is '' (or other empty value): no padding for missed keys: length error instead
+NB. if x is not empty, the first element of its ravel is used as padding element, if it is compatible with the type of vals (i.e. vals,{.,x does not result in an error), otherwise, the default padding element for vals' datatype will be used. This allows use of e.g. a: as meaning: pad with whatever is appropriate.
+getk =: (4 : 0) (''&$: :) NB. monadic default x=''
 if. -.0{get_ready do.
-  getkint=: vals luk NB. update internal version of getk
+  valsi=: vals&i. NB. update internal version of getk
   get_ready=:1 0+.get_ready
 end.
-getkint y
-)
-NB. the same for getv
-getv =: 3 : 0
-if. -. 1{get_ready do.
-  getvint=: keys luv NB. update internal version of getv
-  get_ready=:0 1+.get_ready
+if. #x do.  NB. no padding el given
+  NB. index keys padded with x (if matchrng datatype, or default pad for type)
+  x=. {.,x NB. ensure x is atom
+  (valsi y){keys(, :: (>:@#@[{.[))x NB. index padded keys
+else.
+  keys{~valsi y NB. could yield index error
 end.
-getvint y
 )
 
-NB. joink: join dicts y (as boxed locale numbers) into this dictionary, on keys,ex inplace (1) or not. it returns the dict written to.
+NB. the same for getv
+getv =: (4 : 0) (''&$: :) NB. monadic default x=''
+if. -. 1{get_ready do.
+  keysi=: keys&i. NB. update internal version of getv
+  get_ready=:0 1+.get_ready
+end.
+if. #x do.  NB. padding el given
+  x=. {.,x NB. ensure x is atom
+  NB. index vals padded with x (if matchrng datatype, or default pad for type)
+  (keysi y){vals(, :: (>:@#@[{.[))x NB. index padded keys
+else.
+  vals{~keysi y NB. could yield index error
+end.
+)
+
+NB. merge: join dicts y (as boxed locale numbers, use "," to link boxed number locales, not ";") into this dictionary, on keys, x inplace (1) or not. it returns the dict written to.
 NB.  Notes:
 NB. - if a value is present in the current (or new) it's *overwritten* by
 NB.   the ones in the others (in order) (could be optimised).
-NB. - if joining multiple dicts in place, if one dict joined is not compatible, fails, and leaves the original dict inconsistent.
-joink =: 3 : 0
-0 joink y NB. default create new dict
-:
+NB. - if joining multiple dicts in place, if one dict joined is not compatible, fails, and leaves the original dict incomplete.
+merge =: (4 : 0)(0&$: :) NB. monadic default x=0
 if. -.x do.
   dest=. dict keys;vals    NB. not in place: copy dict as dest
 else. dest=. coname'' end. NB. in place: dest is this dict
@@ -149,11 +203,89 @@ end.
 dest
 )
 
-NB. joinv: join dicts y (as boxed locale numbers) into this dictionary, by catenating values
-NB. TODO finish!
-joinv =: 3 : 0
-for_od. y do. keys__od set vals__od end.
+NB. no joining on values: This can be far more usefully extended to doing
+NB. operations on dictionaries: as appl
+NB. strangely enough, apply does not seem to execute in the dict objects locale... requires seriously odd fix below.
+NB.  https://code.jsoftware.com/wiki/Vocabulary/Locales#Adverbs_in_Locales
+NB. TODO: wrap in try-catch to return control to the right locale, and rethrow
+NB. error.
+appl =: (1 : 0)(''&$: :) NB. '' as default for monad.
+  u appl_int (coname'')
 )
+appl_int =: 2 : 0
+return_loc=. coname''
+cocurrent n
+NB. list of dict locales to operate on, self and those in args
+ll=. (n),y
+NB. intersect or union?
+select. 1<#ll NB. monad or insert?
+case. 0 do. NB. monad
+  NB. keys don't change, apply u"_1 to vals
+  r=. dict keys ,&< u"_1 vals
+case. 1 do. NB. insert
+  NB. case where x is 1 seems to be correct.
+  op=. ([-.-.)`(~.@,)@.(#x) NB. intersection (x empty) or union
+  nk=. keys
+  for_od. }.ll do.
+    nk=. nk op keys__od
+  end.
+  nv=.''
+  for_od. ll do.
+    NB. needs boxing; vals need not be congruous between dicts
+    nv=. nv,<x getv__od nk
+  end.
+  NB. apply u on items between
+  r=. dict nk ,&< > u"_1&.>/ nv
+end.
+cocurrent return_loc
+r
+)
+NB. y indicates inplace (1) or not (0)
+filtk =: 1 : 0
+  u filtk_int (coname'')
+)
+filtk_int =: 2 : 0
+return_loc=.coname''
+cocurrent n
+y=. {.y,0 NB. default to in place if y is empty
+nk=. keys #~ msk=. u"_1 keys
+nv=. vals #~ msk
+if. y do. NB. in-place?
+  'keys vals'=: nk ,&< nv
+  get_ready =: 0 0
+  r=. coname''
+else.
+  r=. dict nk &< nv
+end.
+cocurrent return_loc
+r
+)
+NB. y indicates inplace (1) or not (0)
+filtv =: 1 : 0
+  u filtv_int (coname'')
+)
+filtv_int =: 2 : 0
+return_loc=.coname''
+cocurrent n
+y=. {.y,0 NB. default to in place if y is empty
+nv=. vals #~ msk=. u"_1 vals
+nk=. keys #~ msk
+if. y do. NB. in-place?
+  'keys vals'=: nk ,&< nv
+  get_ready =: 0 0
+  r=. coname''
+else.
+  r=. dict nk ,&< nv
+end.
+cocurrent return_loc
+r
+)
+
+NB. clone dict to new dict
+clone=: 3 : 'dict_z_ keys ,&< vals'
+NB. exchange keys and values
+flip =: 3 : 'dict_z_ vals ,&< keys'
+
 destroy=:codestroy
 
 NB. defines convenience shortcut in z locale
