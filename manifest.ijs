@@ -5,7 +5,9 @@ Noun help_dict_ contains the documentation.
 )
 FILES=: 0 : 0
 dict.ijs
-tests.ijs
+test_dict.ijs
+tests1dict.ijs
+tests2dicts.ijs
 )
 FOLDER=: 'types/dict'
-VERSION=: '0.0.0'
+VERSION=: '0.1.0'
