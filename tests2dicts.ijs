@@ -14,6 +14,23 @@ destroy__b''
 destroy__c''
 destroy__d''
 )
+NB. test dictionary equality
+test_eq =: 3 : 0
+  assert eq__d d NB. should be self-equal
+  assert eq__b b,b NB. should work on array of dict
+  assert -. eq__b d NB. should not equal
+  assert 0 1-: eq__b d,b
+  NB. modify b and check
+  bb=. clone__b ''
+  keys__bb=: |.keys__bb NB. revers k/v
+  vals__bb=: |.vals__bb
+  assert 0 eq__b bb NB. equal but for sort
+  assert eq__b bb   NB. equal but for sort (monad)
+  assert -. 1 eq__b bb NB. not strictly equal
+  vals__bb=:|.vals__bb NB. reverse only V, break link
+  assert -. 0 eq__b bb NB. also not tolerantly equal.
+  destroy__bb''
+)
 NB. actual tests inter-dict ops:
 NB. merge (i.e. join/update keys)
 test_merge=: 3 : 0
@@ -68,9 +85,9 @@ test_applInsert =: 3 : 0
    assert aa~:a,b,aa2 NB. should make new dict
    assert keys__aa -: keys__a ([-.-.) keys__b
    assert vals__aa -: (getv__a 'bc') ,"_1 getv__b'bc'
-   NB. sum between items of a and b, with 0 padding
-   sum1=. 0  + appl__a b NB. sum, union with 0 padding
-   sum2=. a: + appl__a b NB. sum, union with 0 padding
+   NB. sum between items of a and b, with 0 filling
+   sum1=. 0  + appl__a b NB. sum, union with 0 filling
+   sum2=. a: + appl__a b NB. sum, union with 0 filling
    assert 1 eq__sum1 sum2 NB. 0 and a: are same for num
    assert keys__sum1-: 'abcd' NB. union
    assert vals__sum1-: (a:&getv__a + a:&getv__b) 'abcd'
@@ -90,13 +107,4 @@ test_applInsert =: 3 : 0
    destroy__sum2''
    destroy__prod''
    destroy__txt''
-)
-NB. filtk (remove key/value entries based on criteria for keys)
-test_filtk =: 3 : 0
-  1 
-)
-NB. filtv (remove key/value entries based on criteria for vals)
-test_filtv =: 3 : 0
-NB. e.g. removing entries with duplicate values
-  1
 )

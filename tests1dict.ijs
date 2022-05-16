@@ -84,21 +84,21 @@ test_set=: 3 : 0
 )
 
 test_getPadding =: 3 : 0
-assert (getv__d -: '' getv__d ])'ab' NB. '' should be default, and mean no pad
-assert  1 _ 3 -: _ getv__d 'axc'   NB. pad should replace absent key
+assert (getv__d -: '' getv__d ])'ab' NB. '' should be default, and mean no fill
+assert  1 _ 3 -: _ getv__d 'axc'   NB. fill should replace absent key
 assert  1 0 3 -: a: getv__d 'axc'  NB. non-matching defaults to fill
-assert  1 _ 3 -: _ 66 getv__d 'axc' NB. should take first pad
-assert  1 0 3 -: (i. 3 3) getv__d 'axc' NB. should take first pad of ravel
+assert  1 _ 3 -: _ 66 getv__d 'axc' NB. should take first fill
+assert  1 0 3 -: (i. 3 3) getv__d 'axc' NB. should take first fill of ravel
 
-assert (getk__d -: '' getk__d ]) 1 3 NB. '' should be default, and mean no pad
-assert  'aXc' -: 'X' getk__d 1 10 3   NB. pad should replace absent key
+assert (getk__d -: '' getk__d ]) 1 3 NB. '' should be default, and mean no fill
+assert  'aXc' -: 'X' getk__d 1 10 3   NB. fill should replace absent key
 assert  'a c' -: a: getk__d 1 10 3  NB. non-matching defaults to fill
-assert  'aXc' -: 'XY' getk__d 1 10 3 NB. should take first pad
-assert  'aXc' -: (3 3$'XABCDEFGH') getk__d 1 10 3 NB. should take first pad of ravel
+assert  'aXc' -: 'XY' getk__d 1 10 3 NB. should take first fill
+assert  'aXc' -: (3 3$'XABCDEFGH') getk__d 1 10 3 NB. should take first fill of ravel
 )
 getError_expect=: 'index error'
 test_getError =: 3 : 0
-'' getv__d 'abX' NB. should throw index error since absent key and no pad
+'' getv__d 'abX' NB. should throw index error since absent key and no fill
 assert 0
 )
 
@@ -142,23 +142,6 @@ test_clone =: 3 : 0
   destroy__a''
 )
 
-test_eq =: 3 : 0
-  assert eq__d d NB. should be self-equal
-  assert eq__b b,b NB. should work on array of dict
-  assert -. eq__b d NB. should not equal
-  assert 0 1-: eq__b d,b
-  NB. modify b and check
-  bb=. clone__b ''
-  keys__bb=: |.keys__bb NB. revers k/v
-  vals__bb=: |.vals__bb
-  assert 0 eq__b bb NB. equal but for sort
-  assert eq__b bb   NB. equal but for sort (monad)
-  assert -. 1 eq__b bb NB. not strictly equal
-  vals__bb=:|.vals__bb NB. reverse only V, break link
-  assert -. 0 eq__b bb NB. also not tolerantly equal.
-  destroy__bb''
-)
-
 test_sort =: 3 : 0
   NB. test non-inplace sorting
   bb =. clone__srt''
@@ -173,4 +156,42 @@ test_sort =: 3 : 0
   assert (i.#keys__b)-:/:keys__b NB. keys sorted up?
   1 sort__b 'V'    
   assert (i.#vals__b)-:\:vals__b NB. vals sorted down?
+)
+NB. filtk (remove key/value entries based on criteria for keys)
+test_filtk =: 3 : 0
+  NB. non-inplace filter
+  t1=. (e.&'ac') filtk__d ''
+  t2=. (e.&'ac') filtk__d 0
+  assert d~:t1,t2 NB. not in place
+  assert 1 eq__t1,t2 NB. the same result
+  assert keys__t1 -:'ac' NB. correct keys
+  assert vals__t1 -: getv__d 'ac' NB. correct vals
+  NB. test in-place
+  t3=. (e.&'ac') filtk__d 1
+  assert t3=d NB. should be inplace
+  assert 1 eq__t3 t1,t2
+  NB. correctness already verified for t1,t2
+  NB. cleanup
+  destroy__t1''
+  destroy__t2''
+NB.  destroy__t3'' don't, because ref to d.
+)
+NB. filtv (remove key/value entries based on criteria for vals)
+test_filtv =: 3 : 0
+  NB. non-inplace filter
+  t1=. ~: filtv__srt ''
+  t2=. ~: filtv__srt 0
+  assert d~:t1,t2 NB. not in place
+  assert 1 eq__t1,t2 NB. the same result
+  assert keys__t1 -:1 3 5 4 NB. correct keys
+  assert vals__t1 -:'COFE'  NB. correct vals
+  NB. test in-place
+  t3=. ~: filtv__srt 1
+  assert t3=srt NB. should be inplace
+  assert 1 eq__t3 t1,t2
+  NB. correctness already verified for t1,t2
+  NB. cleanup
+  destroy__t1''
+  destroy__t2''
+NB.  destroy__t3'' don't, because ref to srt.
 )
