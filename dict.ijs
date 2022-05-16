@@ -32,8 +32,8 @@ vals__D #/. keys__D If keys or values in D are altered manually, trigger
 getk/getv rebuild with: get_ready=:0 0
 
   map__D ''      pretty print dictionary
-  sort__D y      sorts D by key ('kK') or value ('vV'), lower case being
-                 ascending.
+x sort__D y      sorts D by key ('kK') or value ('vV'), lower case being
+                 ascending. x is a flag for in-place sorting (defaults to 0)
   flip__D ''     exchange keys <-> values; returns new dict
   clone__D ''    clone a dictionary to a new object; returns new dict
 
@@ -46,6 +46,9 @@ Otherwise, the default padding element (e.g. 0 for numbers) is used.
 
 Multi-dictionary Methods:
 --------------------
+x eq__D y        Equality of D with y, by default (x=0), the order of entries is
+                 ignored; when x=1, strict comparison is used, i.e. dicts with
+                 same entries, but sorted differently are not the same.
 x merge__D y     join D with dictionaries in y by merging keys (last survives),
                  in-place if x=1
                  Notes:
@@ -64,6 +67,8 @@ x u appl__D y    insert u between corresponding values in all dicts in D,y
                    dictionaries
                  - any other: make a union between sets of keys, with x used as
                    padding element, as for getk/getv.
+                Note: gerund as u creates a result, but not as expected for /
+                Could change in the future.
 
   u filtk__D y   filter D's keys, keeping entries where u key is 1. (like #). If y is '' or 0, returns a new dict, otherwise, operate in place.
   u filtv__D y   the same, filtering entries by value.
@@ -92,10 +97,10 @@ create=: 3 : 0
 NB. ensure at least rank 1; keys/values should be lists
 'keys vals'=: ,^:(0=#@$)&.> y 
 NB. wouldn't it be better to prune these to start with?
-echo^:(+./-.~:keys) 'warning: non unique keys: only first occurrences kept.'
 uk=. ~:keys
-keys=.uk#keys
-vals=.uk#vals
+echo^:((+/uk)<#keys) 'warning: non unique keys: only first occurrences kept.'
+keys=:uk#keys
+vals=:uk#vals
 0 0$get_ready=:0 0 NB. reset lookup ready flags
 )
 NB. set verb 
@@ -133,15 +138,27 @@ map =: 3 : 0
 keys (;&datatype , ;&$ ,: ,&<&:(lin"_1)) vals
 )
 
-NB. sort: sort dict by x e. 'kvKV'(default k)
+NB. sort: sort dict by y e. 'kvKV'(default k)
 NB.   k/v:keys/vals ascending
 NB.   K/V:keys/vals descending
-sort =: 3 : 0
+NB. x: inplace (1) or not (0)
+NB. returns reference to the dictionary that is sorted
+NB. TODO: generalise to sorting on function applied
+NB. x u sortedby 'kKvV', which would render sort superfluous ( would become
+NB. ]sortedby)
+sort =: 4 : 0(0&$: :)
 a=.'kvKV'i.y
 (3;'unsupported sort: ',":y) assertno a<4
 s=. keys /:@[`(/:@])`(\:@[)`(\:@])@.a vals
-'keys vals'=: keys (,&<)&(s&{) vals
+nkv=. keys (,&<)&(s&{) vals
+if. x do. 
+  'keys vals'=: nkv
+  r=. coname''
+else.
+  r=.dict nkv
+end.
 0 0$get_ready=:0 0 NB. reset lookup ready flags
+r
 )
 NB. update reverse lookup getkint only when getk is called if it's not ready.
 NB.  create and set clear this flag, assuming values being changed.
@@ -183,21 +200,18 @@ NB.   the ones in the others (in order) (could be optimised).
 NB. - if joining multiple dicts in place, if one dict joined is not compatible, fails, and leaves the original dict incomplete.
 merge =: (4 : 0)(0&$: :) NB. monadic default x=0
 if. -.x do.
-  dest=. dict keys;vals    NB. not in place: copy dict as dest
-else. dest=. coname'' end. NB. in place: dest is this dict
+  dest=. dict keys ,&< vals    NB. not in place: copy dict as dest
+else. dest=. coname'' end. NB. in place: dest is *this* dict
 for_od. y do. NB. for other dicts:
   try.
-    assert. vals__dest -:&}.&$ vals__od     NB. require same trailing shape
-    NB. strict datatype checking not good, would prevent e.g. 0 , 0j1
-    NB. assert. vals__dest =&(3!:0) vals__od NB. require same datatype
     keys__od set__dest vals__od
+    NB. set might throw errors.
   catch.
-    (9;'shapes do not match; joined up to dict ',(":od_index),' in y') assertno 0
     if. -. x do. NB. not in place. 
       destroy__dest ''
       dest=. a:
-      break.
     end.
+    (dberr dbsig dberm)'' NB. ugly rethrow
   end.
 end.
 dest
@@ -248,14 +262,19 @@ filtk_int =: 2 : 0
 return_loc=.coname''
 cocurrent n
 y=. {.y,0 NB. default to in place if y is empty
-nk=. keys #~ msk=. u"_1 keys
-nv=. vals #~ msk
+msk=. u keys
+NB. TODO: check msk is boolean vector.
+if. +./ msk -.@e. 0 1 do.
+  cocurrent return_loc
+  'result of u should be a boolean vector' assert 0
+end.
+nkv=. keys ,&<&(msk&#) vals
 if. y do. NB. in-place?
-  'keys vals'=: nk ,&< nv
+  'keys vals'=: nkv
   get_ready =: 0 0
   r=. coname''
 else.
-  r=. dict nk &< nv
+  r=. dict nkv
 end.
 cocurrent return_loc
 r
@@ -268,14 +287,19 @@ filtv_int =: 2 : 0
 return_loc=.coname''
 cocurrent n
 y=. {.y,0 NB. default to in place if y is empty
-nv=. vals #~ msk=. u"_1 vals
-nk=. keys #~ msk
+msk=. u vals
+NB. TODO: check msk is boolean vector.
+if. +./ msk -.@e. 0 1 do.
+  cocurrent return_loc
+  'result of u should be a boolean vector' assert 0
+end.
+nkv=. keys ,&<&(msk&#) vals
 if. y do. NB. in-place?
-  'keys vals'=: nk ,&< nv
+  'keys vals'=:nkv
   get_ready =: 0 0
   r=. coname''
 else.
-  r=. dict nk ,&< nv
+  r=. dict nkv
 end.
 cocurrent return_loc
 r
@@ -285,6 +309,25 @@ NB. clone dict to new dict
 clone=: 3 : 'dict_z_ keys ,&< vals'
 NB. exchange keys and values
 flip =: 3 : 'dict_z_ vals ,&< keys'
+
+NB. dictionary equality
+NB. x: strict (ordering as well, default 0, no ordering)
+NB. y: list of dicts to compare with current
+eq =: 4 : 0(0&$: :)
+  NB. sort order of keys, depending on x
+  sortk =. /:`#@.x keys 
+  eql=.0 #~ #y
+  for_ll. y do.
+    if. x do. NB. key/val same sort!
+      eqk=. keys-:keys__ll
+      eqv=. vals-:vals__ll
+    else.
+      eqk=. (sortk{keys) -: keys__ll {~ skc=./:keys__ll
+      eqv=. (sortk{vals) -: vals__ll {~ skc
+    end.
+    eql=.(eqk*.eqv) ll_index}eql
+  end.
+)
 
 destroy=:codestroy
 
