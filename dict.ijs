@@ -43,7 +43,7 @@ NYI:
   deepget        NYI: needed? would index into nested dictionaries, restricting 
   deepset        values to be boxed. Perhaps better as subclass.
 
-Padding element:
+Fill element:
 --------------------
 If x is '' (default when no x), an index error is thrown when a key or value in
 y is not in the dictionary.  When x is compatible datatype (i.e. vals,#{.x does

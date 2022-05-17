@@ -61,7 +61,7 @@ x sort__D y      sorts D by key ('kK') or value ('vV'), lower case being
   u filtk__D y   filter D's keys, keeping entries where u key is 1. (like for #). If y is '' or 0, returns a new dict, otherwise, operate in place.
   u filtv__D y   the same, filtering entries by value.
 
-Padding element:
+Fill element:
 --------------------
 If x is '' (default when no x), an index error is thrown when a key or value in
 y is not in the dictionary.  When x is compatible datatype (i.e. vals,#{.x does
